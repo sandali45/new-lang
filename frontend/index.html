@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>TinyLang Web Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+ <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+  <!-- Animated background particles -->
+  <div class="bg-particles">
+    <div class="particle" style="top: 20%; left: 10%; animation-delay: -2s;"></div>
+    <div class="particle" style="top: 60%; left: 80%; animation-delay: -4s;"></div>
+    <div class="particle" style="top: 40%; left: 60%; animation-delay: -1s;"></div>
+    <div class="particle" style="top: 80%; left: 30%; animation-delay: -3s;"></div>
+    <div class="particle" style="top: 10%; left: 70%; animation-delay: -5s;"></div>
+  </div>
+
+  <div class="container">
+    <!-- Floating emoji decorations -->
+    <div class="emoji-float">🧩</div>
+    <div class="emoji-float">✨</div>
+
+    <header class="header">
+      <button id="darkToggle" class="theme-toggle">
+        <i class="fas fa-moon"></i>
+        <span>Dark Mode</span>
+      </button>
+      
+      <h1 class="title">Lexical, Syntax & Semantic Analyzer</h1>
+    </header>
+
+    <div class="main-grid">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-icon source-icon">
+            <i class="fas fa-code"></i>
+          </div>
+          <h2 class="panel-title">Source Code</h2>
+        </div>
+        <div class="panel-content">
+          <textarea id="source" class="code-editor" placeholder="Type your TinyLang source code here...
+
+Example:
+int x = 10;
+if (x > 5) {
+    print(x);
+}
+"></textarea>
+          
+          <div class="controls">
+            <button id="analyzeBtn" class="btn btn-primary">
+              <i class="fas fa-play"></i>
+              <span>Analyze Code</span>
+            </button>
+            <input id="apiInput" class="input" placeholder="http://127.0.0.1:8000" />
+            <button id="setApi" class="btn btn-secondary">
+              <i class="fas fa-cog"></i>
+              <span>Set API</span>
+            </button>
+          </div>
+
+          <div class="tip">
+            <i class="fas fa-lightbulb" style="color: #43e97b; margin-right: 0.75rem;"></i>
+            <strong>Pro Tip:</strong> Statements end with <code>;</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-icon error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h2 class="panel-title">Error</h2>
+        </div>
+        <div class="panel-content">
+          <div id="errors">
+            <div class="message message-success">
+              <i class="fas fa-check-circle"></i>
+              <div>
+                <strong>Ready to analyze!</strong>
+                <div style="font-size: 0.9rem; opacity: 0.8;">Enter your code and click analyze to get started</div>
+              </div>
+            </div>
+          </div>
+          <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Analyzing your code with advanced algorithms...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-icon tokens-icon">
+            <i class="fas fa-tags"></i>
+          </div>
+          <h2 class="panel-title">Lexical Tokens</h2>
+        </div>
+        <div class="panel-content">
+          <div style="overflow-x: auto;">
+            <table class="tokens-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Line</th>
+                  <th>Column</th>
+                </tr>
+              </thead>
+              <tbody id="tokenTable">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fas fa-code" style="font-size: 2rem; margin-bottom: 1rem; display: block; opacity: 0.5;"></i>
+                    Lexical tokens will appear here after analysis
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-icon tree-icon">
+            <i class="fas fa-sitemap"></i>
+          </div>
+          <h2 class="panel-title">Parse Tree</h2>
+        </div>
+        <div class="panel-content">
+          <div id="svgWrap" class="svg-container">
+            <div class="svg-placeholder">
+              <i class="fas fa-tree"></i>
+              <div>
+                <strong>Parse tree visualization</strong>
+                <div style="font-size: 0.9rem; margin-top: 0.5rem;">Syntax tree structure will appear here after analysis</div>
+              </div>
+            </div>
+          </div>
+          <button id="exportBtn" class="export-btn" style="display: none;">
+            <i class="fas fa-download"></i>
+            <span>Export as PNG</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      Built 
+      <span class="footer-hearts">
+        <span>🧡</span>
+      </span>
+      by <strong style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Sandali and Oneli</strong>
+    </footer>
+  </div>
+
+  <script>
+    const apiInput = document.getElementById('apiInput');
+    const setApiBtn = document.getElementById('setApi');
+    const source = document.getElementById('source');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const errorsEl = document.getElementById('errors');
+    const tokenTable = document.getElementById('tokenTable');
+    const svgWrap = document.getElementById('svgWrap');
+    const loading = document.getElementById('loading');
+    const exportBtn = document.getElementById('exportBtn');
+    const darkToggle = document.getElementById('darkToggle');
+    const apiUrl = document.getElementById('apiUrl');
+
+    let API = 'http://127.0.0.1:8000';
+    apiInput.value = API;
+
+    setApiBtn.onclick = () => {
+      API = apiInput.value.trim() || API;
+      apiUrl.textContent = 'API: ' + API;
+      
+      // Visual feedback
+      setApiBtn.innerHTML = '<i class="fas fa-check"></i><span>Connected!</span>';
+      setTimeout(() => {
+        setApiBtn.innerHTML = '<i class="fas fa-cog"></i><span>Set API</span>';
+      }, 2000);
+    };
+
+    darkToggle.onclick = () => {
+      document.body.classList.toggle('light-mode');
+      const isLight = document.body.classList.contains('light-mode');
+      darkToggle.innerHTML = isLight
+        ? '<i class="fas fa-sun"></i><span>Light Mode</span>'
+        : '<i class="fas fa-moon"></i><span>Dark Mode</span>';
+    };
+
+    function showErrors(list) {
+      errorsEl.innerHTML = '';
+      if (!list || list.length === 0) {
+        errorsEl.innerHTML = `
+          <div class="message message-success">
+            <i class="fas fa-check-circle"></i>
+            <div>
+              <strong>Analysis completed successfully!</strong>
+              <div style="font-size: 0.9rem; opacity: 0.8;">No syntax or semantic errors found 🎉</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      for (const e of list) {
+        const message = document.createElement('div');
+        message.className = 'message message-error';
+        message.innerHTML = `
+          <i class="fas fa-${e.kind === 'syntax' ? 'times-circle' : 'exclamation-triangle'}"></i>
+          <div>
+            <strong>${e.kind.toUpperCase()} ERROR</strong>
+            <div style="font-size: 0.9rem; margin-top: 0.25rem;">${e.message}</div>
+            ${e.line ? `<div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.25rem;">Line ${e.line}, Column ${e.column}</div>` : ''}
+          </div>
+        `;
+        errorsEl.appendChild(message);
+      }
+    }
+
+    function showTokens(tokens) {
+      tokenTable.innerHTML = '';
+      if (!tokens || tokens.length === 0) {
+        tokenTable.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+              <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; display: block; opacity: 0.5;"></i>
+              No tokens to display
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tokens.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="token-type">${t.type}</td>
+          <td><span class="token-value">${t.value}</span></td>
+          <td style="color: var(--text-secondary);">${t.line ?? ''}</td>
+          <td style="color: var(--text-secondary);">${t.column ?? ''}</td>
+        `;
+        tokenTable.appendChild(tr);
+      });
+    }
+
+    function showSvg(svg) {
+      if (svg) {
+        svgWrap.innerHTML = svg;
+        exportBtn.style.display = 'flex';
+        // Add entrance animation
+        svgWrap.style.animation = 'slideIn 0.6s ease';
+      } else {
+        svgWrap.innerHTML = `
+          <div class="svg-placeholder">
+            <i class="fas fa-exclamation-triangle" style="color: var(--text-muted); opacity: 0.6;"></i>
+            <div>
+              <strong>Parse tree unavailable</strong>
+              <div style="font-size: 0.9rem; margin-top: 0.5rem;">Unable to generate tree due to syntax errors</div>
+            </div>
+          </div>
+        `;
+        exportBtn.style.display = 'none';
+      }
+    }
+
+    exportBtn.onclick = () => {
+      const svg = svgWrap.querySelector('svg');
+      if (!svg) return;
+
+      const originalHTML = exportBtn.innerHTML;
+      exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Exporting...</span>';
+      exportBtn.disabled = true;
+
+      const svgCopy = svg.cloneNode(true);
+      svgCopy.style.backgroundColor = 'white';
+      
+      const svgData = new XMLSerializer().serializeToString(svgCopy);
+      const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        const link = document.createElement('a');
+        link.download = 'parse-tree.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        URL.revokeObjectURL(svgUrl);
+        
+        exportBtn.innerHTML = '<i class="fas fa-check"></i><span>Exported!</span>';
+        setTimeout(() => {
+          exportBtn.innerHTML = originalHTML;
+          exportBtn.disabled = false;
+        }, 2500);
+      };
+      img.src = svgUrl;
+    };
+
+    analyzeBtn.onclick = async () => {
+      if (!source.value.trim()) {
+        showErrors([{
+          kind: 'input',
+          message: 'Please enter some code to analyze'
+        }]);
+        return;
+      }
+
+      // Reset UI and show loading
+      errorsEl.innerHTML = '';
+      tokenTable.innerHTML = '';
+      svgWrap.innerHTML = '';
+      loading.classList.add('show');
+      
+      // Update button state
+      const originalHTML = analyzeBtn.innerHTML;
+      analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Analyzing...</span>';
+      analyzeBtn.disabled = true;
+
+      try {
+        const res = await fetch(API + '/analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ source: source.value })
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+        
+        const data = await res.json();
+        showErrors(data.errors);
+        showTokens(data.tokens);
+        showSvg(data.svg);
+        
+      } catch (e) {
+        showErrors([{
+          kind: 'network',
+          message: `Failed to connect to analysis server: ${e.message}`
+        }]);
+      } finally {
+        loading.classList.remove('show');
+        analyzeBtn.innerHTML = originalHTML;
+        analyzeBtn.disabled = false;
+      }
+    };
+
+    // Add entrance animations for panels
+    document.addEventListener('DOMContentLoaded', function() {
+      const panels = document.querySelectorAll('.glass-panel');
+      panels.forEach((panel, index) => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          panel.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+          panel.style.opacity = '1';
+          panel.style.transform = 'translateY(0)';
+        }, index * 150);
+      });
+    });
+  </script>
+</body>
+</html>
